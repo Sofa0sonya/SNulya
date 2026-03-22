@@ -44,7 +44,7 @@ def test_questions_keyboard():
 # Меню дорожных карт
 def roadmaps_menu_keyboard():
     keyboard = [
-        [KeyboardButton("📄 Рак кишечника")],
+        [KeyboardButton("📄 Рак молочной железы")],
         [KeyboardButton("◀️ Назад")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -140,7 +140,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             current_dir = os.path.dirname(__file__)
             
             # Ищем PDF файл (сначала пробуем colorectal_cancer_roadmap.pdf, потом colorectal_cancer.pdf)
-            pdf_names = ['colorectal_cancer_roadmap.pdf', 'colorectal_cancer.pdf', 'roadmap.pdf']
+            pdf_names = ['breast_cancer_roadmap.pdf']
             pdf_path = None
             
             for pdf_name in pdf_names:
@@ -165,8 +165,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     with open(pdf_path, 'rb') as pdf_file:
                         await update.message.reply_document(
                             document=pdf_file,
-                            filename="dorozhnaya_karta_rak_kishechnika.pdf",
-                            caption="📄 Дорожная карта по раку кишечника\n\nСохраните этот файл для ознакомления."
+                            filename="dorozhnaya_karta_rak_molochnoy_jelezy.pdf",
+                            caption="📄 Дорожная карта по раку молочной железы\n\nСохраните этот файл для ознакомления."
                         )
                     logger.info(f"PDF отправлен пользователю {user_id}")
                     
