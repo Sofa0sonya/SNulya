@@ -1,9 +1,18 @@
+import subprocess
+import sys
+
+# Автоматическая установка библиотеки при запуске
+try:
+    import telegram
+except ImportError:
+    print("Устанавливаем python-telegram-bot...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "python-telegram-bot==20.7"])
+    import telegram
+
 import logging
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext, ConversationHandler, CallbackQueryHandler
-import sqlite3
-from datetime import datetime
 import os
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext, ConversationHandler
 
 # Настройка логирования
 logging.basicConfig(
@@ -121,7 +130,7 @@ async def handle_test_questions(update: Update, context: CallbackContext) -> int
         return TEST_QUESTIONS
 
 # Обработка дорожных карт
-async def handle_roadmaps(update: Update, context: CallbackContext) -> int:
+async def handle_roadmaps(update: Update, context: CallbackContext) -> None:
     text = update.message.text
     
     if text == "Назад в меню":
@@ -129,44 +138,19 @@ async def handle_roadmaps(update: Update, context: CallbackContext) -> int:
             "Возвращаемся в главное меню:",
             reply_markup=main_menu_keyboard()
         )
-        return MAIN_MENU
+        return
     
     elif text == "Рак кишечника":
-        # Путь к PDF файлу на PythonAnywhere
-        # Создайте папку 'files' в вашей директории и поместите туда PDF
-        pdf_path = os.path.join(os.path.dirname(__file__), 'files', 'colorectal_cancer_roadmap.pdf')
-        
-        try:
-            # Проверяем, существует ли файл
-            if os.path.exists(pdf_path):
-                # Отправляем PDF документ
-                with open(pdf_path, 'rb') as pdf_file:
-                    await update.message.reply_document(
-                        document=pdf_file,
-                        filename='roadmap_colorectal_cancer.pdf',
-                        caption="Дорожная карта по раку кишечника"
-                    )
-            else:
-                # Если файл не найден
-                await update.message.reply_text(
-                    "Файл с дорожной картой временно недоступен. Пожалуйста, попробуйте позже.",
-                    reply_markup=roadmaps_menu_keyboard()
-                )
-        except Exception as e:
-            logger.error(f"Ошибка при отправке PDF: {e}")
-            await update.message.reply_text(
-                "Произошла ошибка при отправке файла. Пожалуйста, попробуйте позже.",
-                reply_markup=roadmaps_menu_keyboard()
-            )
-        
-        return MAIN_MENU
+        await update.message.reply_text(
+            "Дорожная карта по раку кишечника скоро будет доступна.",
+            reply_markup=roadmaps_menu_keyboard()
+        )
     
     else:
         await update.message.reply_text(
             "Пожалуйста, выберите тип рака из меню:",
             reply_markup=roadmaps_menu_keyboard()
         )
-        return MAIN_MENU
 
 # Обработка неизвестных сообщений
 async def handle_unknown(update: Update, context: CallbackContext) -> int:
@@ -176,9 +160,16 @@ async def handle_unknown(update: Update, context: CallbackContext) -> int:
     )
     return MAIN_MENU
 
-def main() -> None:
-    # Замените 'YOUR_BOT_TOKEN' на токен вашего бота
-    application = Application.builder().token("8299961523:AAEmzLW_-6BgXxspdxEGweUZ30b3oLqWb-s").build()
+def main():
+    # Получаем токен из переменных окружения
+    token = os.environ.get('TOKEN')
+    
+    if not token:
+        logger.error("Токен не найден! Установите переменную окружения TOKEN")
+        return
+    
+    # Создаем приложение
+    application = Application.builder().token(token).build()
     
     # ConversationHandler для управления состояниями
     conv_handler = ConversationHandler(
@@ -195,15 +186,21 @@ def main() -> None:
     )
     
     application.add_handler(conv_handler)
-    # Добавляем обработчик для дорожных карт (без сохранения состояния)
+    # Добавляем обработчик для дорожных карт
     application.add_handler(MessageHandler(
         filters.Regex('^(Рак кишечника|Назад в меню)$') & ~filters.COMMAND,
         handle_roadmaps
     ))
     
-    # Запуск бота
-    print("Бот запущен...")
+    # Добавляем обработчик для неизвестных сообщений
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_unknown))
+    
+    # Запускаем бота
+    logger.info("Бот запускается...")
     application.run_polling()
+
+if __name__ == '__main__':
+    main()
 
 if __name__ == '__main__':
     main()
