@@ -22,12 +22,6 @@ TEST_QUESTIONS_DATA = {
     "Полипы удаляют из кишки и берут на биопсию. Разве это плохо при раке кишки?": "Удаление полипов из кишки и их последующая биопсия является стандартной процедурой для диагностики рака кишечника, включая рак ободочной кишки и ректосигмоидного перехода. Это позволяет выявить наличие злокачественных клеток и определить тип заболевания. Биопсия помогает точно установить диагноз и определить необходимость дальнейшего лечения. Поэтому удаление и биопсия полипов не являются плохими действиями при раке кишечника."
 }
 
-# Создаем папку files если её нет
-files_dir = os.path.join(os.path.dirname(__file__), 'files')
-if not os.path.exists(files_dir):
-    os.makedirs(files_dir)
-    logger.info(f"Создана папка: {files_dir}")
-
 # Главное меню
 def main_menu_keyboard():
     keyboard = [
@@ -142,18 +136,37 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Если пользователь в меню дорожных карт
     elif state == "roadmaps":
         if text == "📄 Рак кишечника":
-            # Путь к PDF файлу
-            pdf_path = os.path.join(files_dir, 'colorectal_cancer_roadmap.pdf')
+            # Получаем путь к текущей папке (где лежит bot.py)
+            current_dir = os.path.dirname(__file__)
             
-            logger.info(f"Ищем PDF файл: {pdf_path}")
+            # Ищем PDF файл (сначала пробуем colorectal_cancer_roadmap.pdf, потом colorectal_cancer.pdf)
+            pdf_names = ['colorectal_cancer_roadmap.pdf', 'colorectal_cancer.pdf', 'roadmap.pdf']
+            pdf_path = None
             
-            if os.path.exists(pdf_path):
+            for pdf_name in pdf_names:
+                test_path = os.path.join(current_dir, pdf_name)
+                if os.path.exists(test_path):
+                    pdf_path = test_path
+                    break
+            
+            # Также проверяем в папке files
+            files_dir = os.path.join(current_dir, 'files')
+            for pdf_name in pdf_names:
+                test_path = os.path.join(files_dir, pdf_name)
+                if os.path.exists(test_path):
+                    pdf_path = test_path
+                    break
+            
+            logger.info(f"Ищем PDF файл. Проверенные пути: {pdf_names}")
+            logger.info(f"Найденный PDF: {pdf_path}")
+            
+            if pdf_path and os.path.exists(pdf_path):
                 try:
                     with open(pdf_path, 'rb') as pdf_file:
                         await update.message.reply_document(
                             document=pdf_file,
                             filename="dorozhnaya_karta_rak_kishechnika.pdf",
-                            caption="📄 Дорожная карта по раку кишечника"
+                            caption="📄 Дорожная карта по раку кишечника\n\nСохраните этот файл для ознакомления."
                         )
                     logger.info(f"PDF отправлен пользователю {user_id}")
                     
@@ -168,9 +181,24 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         reply_markup=roadmaps_menu_keyboard()
                     )
             else:
-                logger.error(f"PDF не найден: {pdf_path}")
+                # Выводим список всех файлов в текущей папке для отладки
+                current_dir = os.path.dirname(__file__)
+                all_files = os.listdir(current_dir) if os.path.exists(current_dir) else []
+                logger.error(f"PDF не найден. Файлы в папке {current_dir}: {all_files}")
+                
+                # Также проверяем папку files
+                files_dir = os.path.join(current_dir, 'files')
+                if os.path.exists(files_dir):
+                    files_in_files = os.listdir(files_dir)
+                    logger.error(f"Файлы в папке files: {files_in_files}")
+                
                 await update.message.reply_text(
-                    "❌ Файл с дорожной картой временно недоступен.",
+                    f"❌ Файл с дорожной картой не найден.\n\n"
+                    f"Пожалуйста, убедитесь, что файл загружен и называется:\n"
+                    f"- colorectal_cancer_roadmap.pdf\n"
+                    f"или\n"
+                    f"- colorectal_cancer.pdf\n\n"
+                    f"Файл должен быть в корневой папке бота.",
                     reply_markup=roadmaps_menu_keyboard()
                 )
         else:
@@ -183,13 +211,20 @@ def main():
     """Запуск бота"""
     logger.info("🚀 Запуск бота...")
     
-    # Проверяем наличие папки files
-    if os.path.exists(files_dir):
-        logger.info(f"✅ Папка files: {files_dir}")
-        files = os.listdir(files_dir)
-        logger.info(f"📁 Файлы: {files}")
-    else:
-        logger.warning(f"⚠️ Папка files не создана")
+    # Показываем список файлов в текущей папке
+    current_dir = os.path.dirname(__file__)
+    logger.info(f"📁 Текущая папка: {current_dir}")
+    
+    if os.path.exists(current_dir):
+        all_files = os.listdir(current_dir)
+        logger.info(f"📄 Файлы в папке: {all_files}")
+        
+        # Ищем PDF файлы
+        pdf_files = [f for f in all_files if f.endswith('.pdf')]
+        if pdf_files:
+            logger.info(f"📑 Найдены PDF файлы: {pdf_files}")
+        else:
+            logger.warning("⚠️ PDF файлы не найдены в текущей папке")
     
     # Создаем приложение
     application = Application.builder().token(TOKEN).build()
@@ -201,9 +236,6 @@ def main():
     # Запускаем бота
     logger.info("✅ Бот запущен и готов к работе!")
     application.run_polling()
-
-if __name__ == '__main__':
-    main()
 
 if __name__ == '__main__':
     main()
