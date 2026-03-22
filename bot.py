@@ -1,7 +1,7 @@
 import logging
 import os
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext, ConversationHandler
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # Настройка логирования
 logging.basicConfig(
@@ -10,8 +10,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Состояния
-MAIN_MENU, TEST_QUESTIONS = range(2)
+# Токен бота
+TOKEN = "8637527383:AAHwmJkpd59oek3mAFJUtXW5QWG8EEE8ch8"
 
 # Тестовые вопросы и ответы
 TEST_QUESTIONS_DATA = {
@@ -21,6 +21,9 @@ TEST_QUESTIONS_DATA = {
     
     "Полипы удаляют из кишки и берут на биопсию. Разве это плохо при раке кишки?": "Удаление полипов из кишки и их последующая биопсия является стандартной процедурой для диагностики рака кишечника, включая рак ободочной кишки и ректосигмоидного перехода. Это позволяет выявить наличие злокачественных клеток и определить тип заболевания. Биопсия помогает точно установить диагноз и определить необходимость дальнейшего лечения. Поэтому удаление и биопсия полипов не являются плохими действиями при раке кишечника."
 }
+
+# Состояния для ConversationHandler
+MAIN_MENU, TEST_QUESTIONS_MENU, ROADMAPS_MENU = range(3)
 
 # Главное меню
 def main_menu_keyboard():
@@ -37,33 +40,40 @@ def test_questions_keyboard():
         [KeyboardButton("К какому специалисту мне маму отвезти при рмж? К неврологу?")],
         [KeyboardButton("Надо делать молекулярно-генетическое исследование при раке молочной железы?")],
         [KeyboardButton("Полипы удаляют из кишки и берут на биопсию. Разве это плохо при раке кишки?")],
-        [KeyboardButton("Назад в меню")]
+        [KeyboardButton("◀️ Назад в главное меню")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 # Меню дорожных карт
 def roadmaps_menu_keyboard():
     keyboard = [
-        [KeyboardButton("Рак кишечника")],
-        [KeyboardButton("Назад в меню")]
+        [KeyboardButton("📄 Рак кишечника")],
+        [KeyboardButton("◀️ Назад в главное меню")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 # Команда /start
-async def start(update: Update, context: CallbackContext) -> int:
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Отправляет приветствие и показывает меню"""
     user = update.effective_user
+    logger.info(f"Пользователь {user.id} ({user.first_name}) запустил бота")
+    
     welcome_text = f"""Привет, {user.first_name}!
 
 Добро пожаловать в ОнкоКонсультант! Я помогу вам с вопросами по онкологическим заболеваниям.
 
 Выберите интересующую вас опцию:"""
-
+    
     await update.message.reply_text(welcome_text, reply_markup=main_menu_keyboard())
     return MAIN_MENU
 
 # Обработка главного меню
-async def handle_main_menu(update: Update, context: CallbackContext) -> int:
+async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обрабатывает сообщения в главном меню"""
     text = update.message.text
+    user = update.effective_user
+    
+    logger.info(f"Главное меню, сообщение от {user.id}: {text}")
     
     if text == "Вопросы по льготам":
         await update.message.reply_text(
@@ -74,30 +84,34 @@ async def handle_main_menu(update: Update, context: CallbackContext) -> int:
     
     elif text == "Вопросы по диагностике/профилактике/реабилитации":
         await update.message.reply_text(
-            "Бот в разработке. Выберите тестовые вопросы:",
+            "Выберите интересующий вас вопрос:",
             reply_markup=test_questions_keyboard()
         )
-        return TEST_QUESTIONS
+        return TEST_QUESTIONS_MENU
     
     elif text == "Дорожные карты":
         await update.message.reply_text(
-            "Выберите тип рака:",
+            "Выберите тип рака для получения дорожной карты:",
             reply_markup=roadmaps_menu_keyboard()
         )
-        return MAIN_MENU
+        return ROADMAPS_MENU
     
     else:
         await update.message.reply_text(
-            "Пожалуйста, выберите опцию из меню:",
+            "Пожалуйста, используйте кнопки меню для навигации.",
             reply_markup=main_menu_keyboard()
         )
         return MAIN_MENU
 
 # Обработка тестовых вопросов
-async def handle_test_questions(update: Update, context: CallbackContext) -> int:
+async def handle_test_questions(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обрабатывает выбор тестовых вопросов"""
     text = update.message.text
+    user = update.effective_user
     
-    if text == "Назад в меню":
+    logger.info(f"Тестовые вопросы, сообщение от {user.id}: {text}")
+    
+    if text == "◀️ Назад в главное меню":
         await update.message.reply_text(
             "Возвращаемся в главное меню:",
             reply_markup=main_menu_keyboard()
@@ -109,85 +123,130 @@ async def handle_test_questions(update: Update, context: CallbackContext) -> int
             TEST_QUESTIONS_DATA[text],
             reply_markup=test_questions_keyboard()
         )
-        return TEST_QUESTIONS
+        return TEST_QUESTIONS_MENU
     
     else:
         await update.message.reply_text(
             "Пожалуйста, выберите вопрос из списка:",
             reply_markup=test_questions_keyboard()
         )
-        return TEST_QUESTIONS
+        return TEST_QUESTIONS_MENU
 
 # Обработка дорожных карт
-async def handle_roadmaps(update: Update, context: CallbackContext) -> None:
+async def handle_roadmaps(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обрабатывает выбор дорожных карт и отправляет PDF"""
     text = update.message.text
+    user = update.effective_user
     
-    if text == "Назад в меню":
+    logger.info(f"Дорожные карты, сообщение от {user.id}: {text}")
+    
+    if text == "◀️ Назад в главное меню":
         await update.message.reply_text(
             "Возвращаемся в главное меню:",
             reply_markup=main_menu_keyboard()
         )
-        return
+        return MAIN_MENU
     
-    elif text == "Рак кишечника":
-        await update.message.reply_text(
-            "Дорожная карта по раку кишечника скоро будет доступна.",
-            reply_markup=roadmaps_menu_keyboard()
-        )
+    elif text == "📄 Рак кишечника":
+        # Путь к PDF файлу
+        pdf_path = os.path.join(os.path.dirname(__file__), 'files', 'colorectal_cancer_roadmap.pdf')
+        
+        logger.info(f"Ищем PDF файл по пути: {pdf_path}")
+        
+        # Проверяем, существует ли файл
+        if os.path.exists(pdf_path):
+            try:
+                # Отправляем PDF документ
+                with open(pdf_path, 'rb') as pdf_file:
+                    await update.message.reply_document(
+                        document=pdf_file,
+                        filename="dorozhnaya_karta_rak_kishechnika.pdf",
+                        caption="📄 Дорожная карта по раку кишечника\n\nСохраните этот файл для ознакомления."
+                    )
+                logger.info(f"PDF файл успешно отправлен пользователю {user.id}")
+                
+                # После отправки возвращаемся в меню дорожных карт
+                await update.message.reply_text(
+                    "✅ Файл отправлен! Выберите другой тип рака или вернитесь в меню:",
+                    reply_markup=roadmaps_menu_keyboard()
+                )
+                return ROADMAPS_MENU
+                
+            except Exception as e:
+                logger.error(f"Ошибка при отправке PDF: {e}")
+                await update.message.reply_text(
+                    "❌ Произошла ошибка при отправке файла. Пожалуйста, попробуйте позже.",
+                    reply_markup=roadmaps_menu_keyboard()
+                )
+                return ROADMAPS_MENU
+        else:
+            # Если файл не найден
+            logger.error(f"PDF файл не найден: {pdf_path}")
+            
+            # Показываем список доступных файлов для отладки
+            files_dir = os.path.join(os.path.dirname(__file__), 'files')
+            if os.path.exists(files_dir):
+                available_files = os.listdir(files_dir)
+                logger.info(f"Доступные файлы в папке files: {available_files}")
+            
+            await update.message.reply_text(
+                "❌ Файл с дорожной картой временно недоступен.\n\n"
+                "Пожалуйста, сообщите администратору о проблеме.",
+                reply_markup=roadmaps_menu_keyboard()
+            )
+            return ROADMAPS_MENU
     
     else:
         await update.message.reply_text(
             "Пожалуйста, выберите тип рака из меню:",
             reply_markup=roadmaps_menu_keyboard()
         )
+        return ROADMAPS_MENU
 
-# Обработчик для любых других сообщений
-async def handle_message(update: Update, context: CallbackContext) -> None:
+# Обработчик неизвестных сообщений
+async def handle_unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обрабатывает сообщения, которые не попали в другие обработчики"""
     await update.message.reply_text(
-        "Пожалуйста, используйте /start для начала работы.",
+        "Пожалуйста, используйте кнопки меню для навигации или отправьте /start для перезапуска.",
         reply_markup=main_menu_keyboard()
     )
+    return MAIN_MENU
 
 def main():
-    # ТОКЕН ВСТАВЛЕН ПРЯМО В КОД
-    token = "8637527383:AAHwmJkpd59oek3mAFJUtXW5QWG8EEE8ch8"
+    """Запуск бота"""
+    logger.info("🚀 Запуск бота...")
     
-    if not token:
-        logger.error("Токен не найден!")
-        return
+    # Проверяем наличие папки files
+    files_dir = os.path.join(os.path.dirname(__file__), 'files')
+    if os.path.exists(files_dir):
+        logger.info(f"✅ Папка files найдена: {files_dir}")
+        available_files = os.listdir(files_dir)
+        logger.info(f"📁 Доступные файлы: {available_files}")
+    else:
+        logger.warning(f"⚠️ Папка files не найдена: {files_dir}")
     
-    logger.info("Бот запускается...")
-    logger.info(f"Используется токен: {token[:10]}...")  # Логируем первые 10 символов токена
+    # Создаем приложение
+    application = Application.builder().token(TOKEN).build()
     
-    try:
-        application = Application.builder().token(token).build()
-        
-        conv_handler = ConversationHandler(
-            entry_points=[CommandHandler('start', start)],
-            states={
-                MAIN_MENU: [
-                    MessageHandler(filters.TEXT & ~filters.COMMAND, handle_main_menu)
-                ],
-                TEST_QUESTIONS: [
-                    MessageHandler(filters.TEXT & ~filters.COMMAND, handle_test_questions)
-                ],
-            },
-            fallbacks=[CommandHandler('start', start)],
-            allow_reentry=True
-        )
-        
-        application.add_handler(conv_handler)
-        application.add_handler(MessageHandler(
-            filters.Regex('^(Рак кишечника|Назад в меню)$') & ~filters.COMMAND,
-            handle_roadmaps
-        ))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-        
-        logger.info("Бот успешно инициализирован, запускаем polling...")
-        application.run_polling()
-        
-    except Exception as e:
-        logger.error(f"Ошибка при запуске бота: {e}")
+    # Добавляем обработчики
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(
+        filters.Regex('^(Вопросы по льготам|Вопросы по диагностике/профилактике/реабилитации|Дорожные карты)$'),
+        handle_main_menu
+    ))
+    application.add_handler(MessageHandler(
+        filters.Regex('^(К какому специалисту|Надо делать|Полипы удаляют|◀️ Назад в главное меню)$'),
+        handle_test_questions
+    ))
+    application.add_handler(MessageHandler(
+        filters.Regex('^(📄 Рак кишечника|◀️ Назад в главное меню)$'),
+        handle_roadmaps
+    ))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_unknown))
+    
+    # Запускаем бота
+    logger.info("✅ Бот запущен и готов к работе!")
+    application.run_polling()
 
 if __name__ == '__main__':
     main()
