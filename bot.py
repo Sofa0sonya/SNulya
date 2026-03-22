@@ -45,6 +45,7 @@ def test_questions_keyboard():
 def roadmaps_menu_keyboard():
     keyboard = [
         [KeyboardButton("📄 Рак молочной железы")],
+        [KeyboardButton("📄 Рак кишечника")],
         [KeyboardButton("◀️ Назад")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -136,28 +137,37 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Если пользователь в меню дорожных карт
     elif state == "roadmaps":
         if text == "📄 Рак молочной железы":
-            # Получаем путь к текущей папке (где лежит bot.py)
-            current_dir = os.path.dirname(__file__)
+            # Получаем путь к текущей папке
+            current_dir = os.path.dirname(os.path.abspath(__file__))
             
-            # Ищем PDF файл 
-            pdf_names = ['breast_cancer_roadmap.pdf']
+            # Ищем PDF файл для рака молочной железы
+            # Пробуем разные варианты названий
+            pdf_names = [
+                'breast_cancer_roadmap.pdf',
+                'breast_cancer.pdf',
+                'rak_molochnoy_jelezy.pdf',
+                'rmj_roadmap.pdf',
+                'molochnaya_jeleza.pdf'
+            ]
             pdf_path = None
             
+            # Ищем в корневой папке
             for pdf_name in pdf_names:
                 test_path = os.path.join(current_dir, pdf_name)
                 if os.path.exists(test_path):
                     pdf_path = test_path
                     break
             
-            # Также проверяем в папке files
-            files_dir = os.path.join(current_dir, 'files')
-            for pdf_name in pdf_names:
-                test_path = os.path.join(files_dir, pdf_name)
-                if os.path.exists(test_path):
-                    pdf_path = test_path
-                    break
+            # Ищем в папке files
+            if not pdf_path:
+                files_dir = os.path.join(current_dir, 'files')
+                for pdf_name in pdf_names:
+                    test_path = os.path.join(files_dir, pdf_name)
+                    if os.path.exists(test_path):
+                        pdf_path = test_path
+                        break
             
-            logger.info(f"Ищем PDF файл. Проверенные пути: {pdf_names}")
+            logger.info(f"Ищем PDF для рака молочной железы")
             logger.info(f"Найденный PDF: {pdf_path}")
             
             if pdf_path and os.path.exists(pdf_path):
@@ -181,26 +191,91 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         reply_markup=roadmaps_menu_keyboard()
                     )
             else:
-                # Выводим список всех файлов в текущей папке для отладки
-                current_dir = os.path.dirname(__file__)
-                all_files = os.listdir(current_dir) if os.path.exists(current_dir) else []
-                logger.error(f"PDF не найден. Файлы в папке {current_dir}: {all_files}")
+                # Показываем список всех файлов для отладки
+                all_files = os.listdir(current_dir)
+                pdf_files = [f for f in all_files if f.endswith('.pdf')]
                 
-                # Также проверяем папку files
-                files_dir = os.path.join(current_dir, 'files')
-                if os.path.exists(files_dir):
-                    files_in_files = os.listdir(files_dir)
-                    logger.error(f"Файлы в папке files: {files_in_files}")
+                logger.error(f"PDF не найден. Все PDF в папке: {pdf_files}")
+                
+                error_msg = f"❌ Файл с дорожной картой не найден.\n\n"
+                error_msg += f"Пожалуйста, загрузите PDF файл с одним из следующих названий:\n"
+                for name in pdf_names:
+                    error_msg += f"• {name}\n"
+                error_msg += f"\nФайл должен быть в корневой папке бота.\n\n"
+                
+                if pdf_files:
+                    error_msg += f"Найденные PDF файлы:\n"
+                    for f in pdf_files:
+                        error_msg += f"• {f}\n"
+                    error_msg += f"\nЕсли файл называется иначе, переименуйте его в breast_cancer_roadmap.pdf"
                 
                 await update.message.reply_text(
-                    f"❌ Файл с дорожной картой не найден.\n\n"
-                    f"Пожалуйста, убедитесь, что файл загружен и называется:\n"
-                    f"- breast_cancer_roadmap.pdf\n"
-                    f"или\n"
-                    f"- breast_cancer_roadmap.pdf\n\n"
-                    f"Файл должен быть в корневой папке бота.",
+                    error_msg,
                     reply_markup=roadmaps_menu_keyboard()
                 )
+        
+        elif text == "📄 Рак кишечника":
+            # Получаем путь к текущей папке
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            
+            # Ищем PDF файл для рака кишечника
+            pdf_names = [
+                'colorectal_cancer_roadmap.pdf',
+                'colorectal_cancer.pdf',
+                'rak_kishechnika.pdf',
+                'rak_kishki.pdf'
+            ]
+            pdf_path = None
+            
+            # Ищем в корневой папке
+            for pdf_name in pdf_names:
+                test_path = os.path.join(current_dir, pdf_name)
+                if os.path.exists(test_path):
+                    pdf_path = test_path
+                    break
+            
+            # Ищем в папке files
+            if not pdf_path:
+                files_dir = os.path.join(current_dir, 'files')
+                for pdf_name in pdf_names:
+                    test_path = os.path.join(files_dir, pdf_name)
+                    if os.path.exists(test_path):
+                        pdf_path = test_path
+                        break
+            
+            logger.info(f"Ищем PDF для рака кишечника")
+            logger.info(f"Найденный PDF: {pdf_path}")
+            
+            if pdf_path and os.path.exists(pdf_path):
+                try:
+                    with open(pdf_path, 'rb') as pdf_file:
+                        await update.message.reply_document(
+                            document=pdf_file,
+                            filename="dorozhnaya_karta_rak_kishechnika.pdf",
+                            caption="📄 Дорожная карта по раку кишечника\n\nСохраните этот файл для ознакомления."
+                        )
+                    logger.info(f"PDF отправлен пользователю {user_id}")
+                    
+                    await update.message.reply_text(
+                        "✅ Файл отправлен! Выберите другой тип рака:",
+                        reply_markup=roadmaps_menu_keyboard()
+                    )
+                except Exception as e:
+                    logger.error(f"Ошибка отправки PDF: {e}")
+                    await update.message.reply_text(
+                        "❌ Ошибка при отправке файла. Попробуйте позже.",
+                        reply_markup=roadmaps_menu_keyboard()
+                    )
+            else:
+                error_msg = f"❌ Файл с дорожной картой для рака кишечника не найден.\n\n"
+                error_msg += f"Пожалуйста, загрузите PDF файл с названием:\n"
+                error_msg += f"• colorectal_cancer_roadmap.pdf\n"
+                
+                await update.message.reply_text(
+                    error_msg,
+                    reply_markup=roadmaps_menu_keyboard()
+                )
+        
         else:
             await update.message.reply_text(
                 "Пожалуйста, выберите тип рака из меню:",
@@ -212,12 +287,12 @@ def main():
     logger.info("🚀 Запуск бота...")
     
     # Показываем список файлов в текущей папке
-    current_dir = os.path.dirname(__file__)
+    current_dir = os.path.dirname(os.path.abspath(__file__))
     logger.info(f"📁 Текущая папка: {current_dir}")
     
     if os.path.exists(current_dir):
         all_files = os.listdir(current_dir)
-        logger.info(f"📄 Файлы в папке: {all_files}")
+        logger.info(f"📄 Все файлы: {all_files}")
         
         # Ищем PDF файлы
         pdf_files = [f for f in all_files if f.endswith('.pdf')]
