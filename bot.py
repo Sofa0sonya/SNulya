@@ -135,11 +135,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Если пользователь в меню дорожных карт
     elif state == "roadmaps":
-        if text == "📄 Рак кишечника":
+        if text == "📄 Рак молочной железы":
             # Получаем путь к текущей папке (где лежит bot.py)
             current_dir = os.path.dirname(__file__)
             
-            # Ищем PDF файл (сначала пробуем colorectal_cancer_roadmap.pdf, потом colorectal_cancer.pdf)
+            # Ищем PDF файл 
             pdf_names = ['breast_cancer_roadmap.pdf']
             pdf_path = None
             
@@ -195,9 +195,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(
                     f"❌ Файл с дорожной картой не найден.\n\n"
                     f"Пожалуйста, убедитесь, что файл загружен и называется:\n"
-                    f"- colorectal_cancer_roadmap.pdf\n"
+                    f"- breast_cancer_roadmap.pdf\n"
                     f"или\n"
-                    f"- colorectal_cancer.pdf\n\n"
+                    f"- breast_cancer_roadmap.pdf\n\n"
                     f"Файл должен быть в корневой папке бота.",
                     reply_markup=roadmaps_menu_keyboard()
                 )
