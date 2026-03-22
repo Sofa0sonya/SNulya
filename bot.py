@@ -143,7 +143,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif state == "roadmaps":
         if text == "📄 Рак кишечника":
             # Путь к PDF файлу
-            pdf_path = os.path.join(files_dir, 'colorectal_cancer_roadmap')
+            pdf_path = os.path.join(files_dir, 'colorectal_cancer_roadmap.pdf')
             
             logger.info(f"Ищем PDF файл: {pdf_path}")
             
@@ -201,6 +201,9 @@ def main():
     # Запускаем бота
     logger.info("✅ Бот запущен и готов к работе!")
     application.run_polling()
+
+if __name__ == '__main__':
+    main()
 
 if __name__ == '__main__':
     main()
