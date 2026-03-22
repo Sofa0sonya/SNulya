@@ -45,7 +45,6 @@ def test_questions_keyboard():
 def roadmaps_menu_keyboard():
     keyboard = [
         [KeyboardButton("📄 Рак молочной железы")],
-        [KeyboardButton("📄 Рак кишечника")],
         [KeyboardButton("◀️ Назад")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -208,68 +207,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     for f in pdf_files:
                         error_msg += f"• {f}\n"
                     error_msg += f"\nЕсли файл называется иначе, переименуйте его в breast_cancer_roadmap.pdf"
-                
-                await update.message.reply_text(
-                    error_msg,
-                    reply_markup=roadmaps_menu_keyboard()
-                )
-        
-        elif text == "📄 Рак кишечника":
-            # Получаем путь к текущей папке
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            
-            # Ищем PDF файл для рака кишечника
-            pdf_names = [
-                'colorectal_cancer_roadmap.pdf',
-                'colorectal_cancer.pdf',
-                'rak_kishechnika.pdf',
-                'rak_kishki.pdf'
-            ]
-            pdf_path = None
-            
-            # Ищем в корневой папке
-            for pdf_name in pdf_names:
-                test_path = os.path.join(current_dir, pdf_name)
-                if os.path.exists(test_path):
-                    pdf_path = test_path
-                    break
-            
-            # Ищем в папке files
-            if not pdf_path:
-                files_dir = os.path.join(current_dir, 'files')
-                for pdf_name in pdf_names:
-                    test_path = os.path.join(files_dir, pdf_name)
-                    if os.path.exists(test_path):
-                        pdf_path = test_path
-                        break
-            
-            logger.info(f"Ищем PDF для рака кишечника")
-            logger.info(f"Найденный PDF: {pdf_path}")
-            
-            if pdf_path and os.path.exists(pdf_path):
-                try:
-                    with open(pdf_path, 'rb') as pdf_file:
-                        await update.message.reply_document(
-                            document=pdf_file,
-                            filename="dorozhnaya_karta_rak_kishechnika.pdf",
-                            caption="📄 Дорожная карта по раку кишечника\n\nСохраните этот файл для ознакомления."
-                        )
-                    logger.info(f"PDF отправлен пользователю {user_id}")
-                    
-                    await update.message.reply_text(
-                        "✅ Файл отправлен! Выберите другой тип рака:",
-                        reply_markup=roadmaps_menu_keyboard()
-                    )
-                except Exception as e:
-                    logger.error(f"Ошибка отправки PDF: {e}")
-                    await update.message.reply_text(
-                        "❌ Ошибка при отправке файла. Попробуйте позже.",
-                        reply_markup=roadmaps_menu_keyboard()
-                    )
-            else:
-                error_msg = f"❌ Файл с дорожной картой для рака кишечника не найден.\n\n"
-                error_msg += f"Пожалуйста, загрузите PDF файл с названием:\n"
-                error_msg += f"• colorectal_cancer_roadmap.pdf\n"
                 
                 await update.message.reply_text(
                     error_msg,
