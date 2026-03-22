@@ -62,7 +62,8 @@ def roadmaps_menu_keyboard():
 
 # Команда /start
 async def start(update: Update, context: CallbackContext) -> int:
-    user = update.message.from_user
+    """Обработчик команды /start"""
+    user = update.effective_user
     welcome_text = f"""Привет, {user.first_name}!
 
 Добро пожаловать в ОнкоКонсультант! Я помогу вам с вопросами по онкологическим заболеваниям.
@@ -74,6 +75,7 @@ async def start(update: Update, context: CallbackContext) -> int:
 
 # Обработка главного меню
 async def handle_main_menu(update: Update, context: CallbackContext) -> int:
+    """Обработчик текстовых сообщений в главном меню"""
     text = update.message.text
     
     if text == "Вопросы по льготам":
@@ -106,6 +108,7 @@ async def handle_main_menu(update: Update, context: CallbackContext) -> int:
 
 # Обработка тестовых вопросов
 async def handle_test_questions(update: Update, context: CallbackContext) -> int:
+    """Обработчик текстовых сообщений в меню тестовых вопросов"""
     text = update.message.text
     
     if text == "Назад в меню":
@@ -131,6 +134,7 @@ async def handle_test_questions(update: Update, context: CallbackContext) -> int
 
 # Обработка дорожных карт
 async def handle_roadmaps(update: Update, context: CallbackContext) -> None:
+    """Обработчик для дорожных карт"""
     text = update.message.text
     
     if text == "Назад в меню":
@@ -152,15 +156,16 @@ async def handle_roadmaps(update: Update, context: CallbackContext) -> None:
             reply_markup=roadmaps_menu_keyboard()
         )
 
-# Обработка неизвестных сообщений
-async def handle_unknown(update: Update, context: CallbackContext) -> int:
+# Обработчик для любых других сообщений (когда состояние не определено)
+async def handle_message(update: Update, context: CallbackContext) -> None:
+    """Обработчик для сообщений вне ConversationHandler"""
     await update.message.reply_text(
-        "Пожалуйста, используйте кнопки меню для навигации.",
+        "Пожалуйста, используйте /start для начала работы.",
         reply_markup=main_menu_keyboard()
     )
-    return MAIN_MENU
 
 def main():
+    """Главная функция запуска бота"""
     # Получаем токен из переменных окружения
     token = os.environ.get('TOKEN')
     
@@ -168,10 +173,12 @@ def main():
         logger.error("Токен не найден! Установите переменную окружения TOKEN")
         return
     
+    logger.info("Бот запускается...")
+    
     # Создаем приложение
     application = Application.builder().token(token).build()
     
-    # ConversationHandler для управления состояниями
+    # Создаем ConversationHandler
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
@@ -183,24 +190,23 @@ def main():
             ],
         },
         fallbacks=[CommandHandler('start', start)],
+        allow_reentry=True  # Разрешаем повторный вход
     )
     
+    # Добавляем ConversationHandler
     application.add_handler(conv_handler)
-    # Добавляем обработчик для дорожных карт
+    
+    # Добавляем обработчик для дорожных карт (вне ConversationHandler)
     application.add_handler(MessageHandler(
         filters.Regex('^(Рак кишечника|Назад в меню)$') & ~filters.COMMAND,
         handle_roadmaps
     ))
     
-    # Добавляем обработчик для неизвестных сообщений
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_unknown))
+    # Добавляем обработчик для всех остальных сообщений
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     # Запускаем бота
-    logger.info("Бот запускается...")
-    application.run_polling()
-
-if __name__ == '__main__':
-    main()
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
     main()
