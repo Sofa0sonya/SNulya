@@ -1,14 +1,3 @@
-import subprocess
-import sys
-
-# Автоматическая установка библиотеки при запуске
-try:
-    import telegram
-except ImportError:
-    print("Устанавливаем python-telegram-bot...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "python-telegram-bot==20.7"])
-    import telegram
-
 import logging
 import os
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
@@ -62,7 +51,6 @@ def roadmaps_menu_keyboard():
 
 # Команда /start
 async def start(update: Update, context: CallbackContext) -> int:
-    """Обработчик команды /start"""
     user = update.effective_user
     welcome_text = f"""Привет, {user.first_name}!
 
@@ -75,7 +63,6 @@ async def start(update: Update, context: CallbackContext) -> int:
 
 # Обработка главного меню
 async def handle_main_menu(update: Update, context: CallbackContext) -> int:
-    """Обработчик текстовых сообщений в главном меню"""
     text = update.message.text
     
     if text == "Вопросы по льготам":
@@ -108,7 +95,6 @@ async def handle_main_menu(update: Update, context: CallbackContext) -> int:
 
 # Обработка тестовых вопросов
 async def handle_test_questions(update: Update, context: CallbackContext) -> int:
-    """Обработчик текстовых сообщений в меню тестовых вопросов"""
     text = update.message.text
     
     if text == "Назад в меню":
@@ -134,7 +120,6 @@ async def handle_test_questions(update: Update, context: CallbackContext) -> int
 
 # Обработка дорожных карт
 async def handle_roadmaps(update: Update, context: CallbackContext) -> None:
-    """Обработчик для дорожных карт"""
     text = update.message.text
     
     if text == "Назад в меню":
@@ -156,57 +141,53 @@ async def handle_roadmaps(update: Update, context: CallbackContext) -> None:
             reply_markup=roadmaps_menu_keyboard()
         )
 
-# Обработчик для любых других сообщений (когда состояние не определено)
+# Обработчик для любых других сообщений
 async def handle_message(update: Update, context: CallbackContext) -> None:
-    """Обработчик для сообщений вне ConversationHandler"""
     await update.message.reply_text(
         "Пожалуйста, используйте /start для начала работы.",
         reply_markup=main_menu_keyboard()
     )
 
 def main():
-    """Главная функция запуска бота"""
-    # Получаем токен из переменных окружения
-    token = os.environ.get('TOKEN')
+    # ТОКЕН ВСТАВЛЕН ПРЯМО В КОД
+    token = "8637527383:AAHwmJkpd59oek3mAFJUtXW5QWG8EEE8ch8"
     
     if not token:
-        logger.error("Токен не найден! Установите переменную окружения TOKEN")
+        logger.error("Токен не найден!")
         return
     
     logger.info("Бот запускается...")
+    logger.info(f"Используется токен: {token[:10]}...")  # Логируем первые 10 символов токена
     
-    # Создаем приложение
-    application = Application.builder().token(token).build()
-    
-    # Создаем ConversationHandler
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
-        states={
-            MAIN_MENU: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_main_menu)
-            ],
-            TEST_QUESTIONS: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_test_questions)
-            ],
-        },
-        fallbacks=[CommandHandler('start', start)],
-        allow_reentry=True  # Разрешаем повторный вход
-    )
-    
-    # Добавляем ConversationHandler
-    application.add_handler(conv_handler)
-    
-    # Добавляем обработчик для дорожных карт (вне ConversationHandler)
-    application.add_handler(MessageHandler(
-        filters.Regex('^(Рак кишечника|Назад в меню)$') & ~filters.COMMAND,
-        handle_roadmaps
-    ))
-    
-    # Добавляем обработчик для всех остальных сообщений
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    
-    # Запускаем бота
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    try:
+        application = Application.builder().token(token).build()
+        
+        conv_handler = ConversationHandler(
+            entry_points=[CommandHandler('start', start)],
+            states={
+                MAIN_MENU: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, handle_main_menu)
+                ],
+                TEST_QUESTIONS: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, handle_test_questions)
+                ],
+            },
+            fallbacks=[CommandHandler('start', start)],
+            allow_reentry=True
+        )
+        
+        application.add_handler(conv_handler)
+        application.add_handler(MessageHandler(
+            filters.Regex('^(Рак кишечника|Назад в меню)$') & ~filters.COMMAND,
+            handle_roadmaps
+        ))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        
+        logger.info("Бот успешно инициализирован, запускаем polling...")
+        application.run_polling()
+        
+    except Exception as e:
+        logger.error(f"Ошибка при запуске бота: {e}")
 
 if __name__ == '__main__':
     main()
